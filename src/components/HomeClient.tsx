@@ -39,12 +39,21 @@ function buildShowcaseEventMessage(item: MenuItem): string {
   );
 }
 
+// crypto.randomUUID() solo existe en contextos seguros (HTTPS o localhost);
+// sin HTTPS (ej. detrás de una IP plana) el navegador no lo expone.
+function generateId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `id-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 function readOrCreateConversationId(): string {
   if (typeof window === "undefined") return "";
   const STORAGE_KEY = "conversationId";
   const existing = window.localStorage.getItem(STORAGE_KEY);
   if (existing) return existing;
-  const generated = crypto.randomUUID();
+  const generated = generateId();
   window.localStorage.setItem(STORAGE_KEY, generated);
   return generated;
 }
