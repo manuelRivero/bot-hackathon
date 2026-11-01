@@ -18,5 +18,25 @@
     "paymentMethod": "online",
     "dispatched": true,
     "createdAt": "2026-11-01T20:08:47.745Z"
+  },
+  {
+    "id": "106966d0-77fe-4723-821c-35b0ec7b5a8b",
+    "conversationId": "9de5ea70-e49a-4fe7-8918-c2b8fa0daad0",
+    "customerName": "Manuel",
+    "items": [
+      {
+        "itemId": "prin-04",
+        "name": "Hamburguesa Picante",
+        "unitPrice": 10200,
+        "currency": "ARS",
+        "quantity": 1
+      }
+    ],
+    "total": 10200,
+    "currency": "ARS",
+    "address": "lavalle 1832",
+    "paymentMethod": "online",
+    "dispatched": true,
+    "createdAt": "2026-11-01T20:29:22.219Z"
   }
 ]
