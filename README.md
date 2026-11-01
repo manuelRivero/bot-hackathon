@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bot Hackathon — Agente ReAct para un restaurante
 
-## Getting Started
+Chatbot conversacional para un restaurante ficticio, construido como agente **ReAct** (LangGraph
++ OpenAI) sobre Next.js. El cliente pide todo por chat (menú, carrito, confirmación, dirección y
+método de pago) y hay un panel de administración para gestionar los pedidos que llegan.
 
-First, run the development server:
+## Demo en vivo
+
+- **Chat del cliente:** http://201.32.132.184
+- **Panel de administración:** http://201.32.132.184/admin
+
+> El dominio `dwday-91891350.online` está en proceso de propagación DNS — mientras tanto usar la IP.
+
+📄 **Detalle técnico de las decisiones de diseño:** [`ARCHITECTURE.md`](./ARCHITECTURE.md)
+
+---
+
+## Cómo evaluar — flujo sugerido
+
+### 1. Chat del cliente (`/`)
+
+1. Al entrar, el bot se presenta solo usando los datos reales del negocio (nombre, tipo de
+   cocina) — no es un saludo genérico.
+2. Probar la **vitrina**: botón flotante "Ver menú 🍽" (abajo a la derecha) abre un panel lateral
+   con los platos. Clickear cualquier item **sin confirmar nada por botón** — se agrega al
+   carrito al instante (aparece una card nativa en el chat) y el bot reacciona con un comentario
+   contextual (ingredientes, si es picante, si es para compartir, etc., según el plato).
+3. Pedir algo más por texto libre, ej: *"¿tienen algo vegetariano?"*, *"dame otra pizza"*,
+   *"¿qué ingredientes tiene la hamburguesa picante?"*.
+4. Decir *"eso es todo"* o similar — ahí el bot pide el nombre (no antes, para no cortar las ganas
+   de seguir pidiendo).
+5. Confirmar el pedido. El bot sigue automáticamente pidiendo:
+   - **Dirección de entrega** (texto libre, sin validación — es una demo).
+   - **Método de pago**: acá aparecen botones (Efectivo / Pago online) — también se puede
+     responder escribiendo ("pago en efectivo", "con tarjeta", etc.), el bot entiende ambos
+     caminos por igual.
+6. Botón **"↺ Empezar de nuevo"** (arriba del chat) reinicia la conversación sin perder el pedido
+   ya confirmado.
+
+### 2. Panel de administración (`/admin`)
+
+1. Ver la tabla de pedidos (fecha, cliente, items, total, método de pago, estado).
+2. Click en **"Ver detalle"** → modal con el desglose completo del pedido.
+3. Click en **"Despachar pedido"** → lo marca como despachado (modal de éxito) y, si el cliente
+   sigue con el chat abierto en otra pestaña, le llega **en tiempo real** (sin recargar) un
+   mensaje avisando que su pedido fue despachado — vía un canal de notificaciones (SSE).
+
+---
+
+## Qué mirar si se evalúa el diseño del agente
+
+- **Las tools hacen los efectos, el LLM solo razona y redacta.** El agente nunca escribe directo
+  a los datos — todo pasa por funciones puras + tools con gates (`src/lib/services/`,
+  `src/lib/agent/tools/`).
+- **Botones y texto libre llegan al mismo efecto.** El botón de método de pago no depende de que
+  el modelo "se acuerde" de llamar la tool: el click aplica el efecto de forma determinística y
+  recién después el LLM reacciona en lenguaje natural.
+- **Metadata del menú alimenta la conversación, no solo el catálogo.** Cada plato tiene
+  ingredientes, alérgenos, nivel de picante, para cuántas personas y preparación
+  (`data/menu.json`) — el bot elige qué mencionar (máx. 2 datos, priorizados) en vez de recitar
+  una ficha técnica.
+- **"Base de datos" = archivos JSON** en `/data` (`menu.json`, `business.json`, `carts.json`,
+  `orders.json`), pensado para un hackathon: sin infraestructura de BD real.
+
+---
+
+## Stack técnico
+
+- **Next.js 16** (App Router, TypeScript)
+- **LangGraph** (`createReactAgent`) + **LangChain** + **OpenAI** (`gpt-4o-mini`)
+- Persistencia: archivos JSON locales (sin base de datos externa)
+- Notificaciones en tiempo real: Server-Sent Events (pub/sub en memoria)
+- Deploy: VPS (Ubuntu) con Nginx como reverse proxy + PM2
+
+## Correrlo en local
 
 ```bash
+git clone https://github.com/manuelRivero/bot-hackathon.git
+cd bot-hackathon
+npm install
+
+# crear .env.local con:
+# OPENAI_API_KEY=sk-...
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir [http://localhost:3000](http://localhost:3000) (chat) y
+[http://localhost:3000/admin](http://localhost:3000/admin) (panel).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Estructura relevante
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+data/                   # "base de datos": menu, business, carts, orders (JSON)
+src/app/                # rutas Next.js (chat, /admin, API routes)
+src/components/         # UI: chat, vitrina, admin, modales
+src/lib/agent/          # el agente ReAct: prompt, tools, contexto
+src/lib/services/       # lógica de negocio pura (carrito, pedidos, hooks de conversación)
+src/lib/db/             # acceso a los JSON (única puerta de lectura/escritura)
+```
