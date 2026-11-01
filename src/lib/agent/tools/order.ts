@@ -8,6 +8,7 @@ import {
   removeItemFromCart,
   setCustomerName,
 } from "@/lib/services/cart";
+import { setDeliveryAddress, setPaymentMethod } from "@/lib/services/orderFulfillment";
 
 const toJson = (value: unknown) => JSON.stringify(value);
 
@@ -85,7 +86,45 @@ export const confirmOrderTool = new DynamicStructuredTool({
     if (!result.ok) {
       return toJson({ error: result.error, missing: result.error.replace("_required", "") });
     }
-    return toJson({ success: true, order: result.order });
+    return toJson({ success: true, order: result.order, nextStep: "awaiting_address" });
+  },
+});
+
+export const setDeliveryAddressTool = new DynamicStructuredTool({
+  name: "set_delivery_address",
+  description:
+    "Guarda la dirección de entrega del pedido ya confirmado. No valida el formato (es una " +
+    "demo): cualquier texto que el cliente diga como dirección es válido. Solo llamala " +
+    "después de confirm_order, cuando el paso pendiente sea 'awaiting_address'.",
+  schema: z.object({
+    address: z.string().min(1),
+  }),
+  func: async ({ address }, _runManager, config) => {
+    const { conversationId } = getAgentContext(config);
+    const result = await setDeliveryAddress(conversationId, address);
+    if (!result.ok) {
+      return toJson({ error: result.error });
+    }
+    return toJson({ success: true, order: result.order, nextStep: result.step });
+  },
+});
+
+export const setPaymentMethodTool = new DynamicStructuredTool({
+  name: "set_payment_method",
+  description:
+    "Guarda el método de pago del pedido: 'cash' (efectivo) u 'online' (pago online). Es el " +
+    "último paso del pedido. Solo llamala cuando ya haya dirección guardada (paso " +
+    "'awaiting_payment'). Si falta la dirección, devuelve un error — pedila primero.",
+  schema: z.object({
+    method: z.enum(["cash", "online"]),
+  }),
+  func: async ({ method }, _runManager, config) => {
+    const { conversationId } = getAgentContext(config);
+    const result = await setPaymentMethod(conversationId, method);
+    if (!result.ok) {
+      return toJson({ error: result.error });
+    }
+    return toJson({ success: true, order: result.order, nextStep: result.step });
   },
 });
 
@@ -95,4 +134,6 @@ export const orderTools = [
   removeItemFromCartTool,
   setCustomerNameTool,
   confirmOrderTool,
+  setDeliveryAddressTool,
+  setPaymentMethodTool,
 ];

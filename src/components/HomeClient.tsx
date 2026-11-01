@@ -7,6 +7,7 @@ import type { BusinessInfo } from "@/lib/db/business";
 import type { MenuItem } from "@/lib/db/menu";
 import type { ChatTurn, DisplayMessage } from "@/lib/chat/types";
 import { selectConversationHooks, type ConversationHook } from "@/lib/services/conversationHooks";
+import type { PaymentMethod } from "@/lib/db/orders";
 
 let idCounter = 0;
 const nextId = () => `msg-${++idCounter}`;
@@ -61,7 +62,9 @@ export function HomeClient({ business }: { business: BusinessInfo }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
+  const [showcaseOpen, setShowcaseOpen] = useState(false);
   const historyRef = useRef<ChatTurn[]>([]);
+  const paymentPromptOrderIdRef = useRef<string | null>(null);
 
   async function askAgent(message: string): Promise<string> {
     const history = historyRef.current;
@@ -84,17 +87,83 @@ export function HomeClient({ business }: { business: BusinessInfo }) {
     }
   }
 
-  async function sendMessage() {
-    const text = input.trim();
+  /** Chequea si hay un pedido esperando método de pago y muestra los botones una sola vez por pedido. */
+  async function checkPendingOrderForPaymentPrompt() {
+    try {
+      const res = await fetch(`/api/order/pending?conversationId=${conversationId}`);
+      const data = await res.json();
+      const pending = data.pending as { orderId: string; step: string } | null;
+      if (pending?.step === "awaiting_payment" && paymentPromptOrderIdRef.current !== pending.orderId) {
+        paymentPromptOrderIdRef.current = pending.orderId;
+        setMessages((prev) => [...prev, { id: nextId(), kind: "payment_choice" }]);
+      }
+    } catch {
+      // No crítico: si falla, el cliente puede igual escribir el método de pago en texto.
+    }
+  }
+
+  /**
+   * Camino único de envío: lo usan tanto el input de texto como los botones de pago
+   * (misma función, mismo efecto — el agente interpreta igual "Pago en efectivo" tipeado
+   * o clickeado).
+   */
+  async function sendTextMessage(text: string) {
     if (!text || loading || !conversationId) return;
 
     setMessages((prev) => [...prev, { id: nextId(), kind: "text", role: "user", content: text }]);
-    setInput("");
     setLoading(true);
 
     const reply = await askAgent(text);
     setMessages((prev) => [...prev, { id: nextId(), kind: "text", role: "assistant", content: reply }]);
     setLoading(false);
+    await checkPendingOrderForPaymentPrompt();
+  }
+
+  async function sendMessage() {
+    const text = input.trim();
+    setInput("");
+    await sendTextMessage(text);
+  }
+
+  /**
+   * Efecto determinístico del click, igual que handleSelectFromShowcase: no depende
+   * de que el LLM llame set_payment_method, el click lo aplica directo y el agente
+   * solo reacciona después.
+   */
+  async function handleChoosePayment(method: PaymentMethod, label: string) {
+    if (loading || !conversationId) return;
+
+    setMessages((prev) => [...prev, { id: nextId(), kind: "text", role: "user", content: label }]);
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/order/payment-method", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, method }),
+      });
+      if (!res.ok) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: nextId(),
+            kind: "text",
+            role: "assistant",
+            content: "No pude registrar el método de pago, probá de nuevo.",
+          },
+        ]);
+        return;
+      }
+
+      const eventNote =
+        `[EVENTO_PAGO] El cliente eligió "${label}" desde los botones (el pedido ya se ` +
+        `actualizó, NO llames set_payment_method de nuevo). Cerrá el pedido con un mensaje ` +
+        `breve de agradecimiento y resumen (dirección + método de pago).`;
+      const reply = await askAgent(eventNote);
+      setMessages((prev) => [...prev, { id: nextId(), kind: "text", role: "assistant", content: reply }]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSelectFromShowcase(item: MenuItem) {
@@ -120,11 +189,13 @@ export function HomeClient({ business }: { business: BusinessInfo }) {
         ...prev,
         { id: nextId(), kind: "cart_update", addedItemName: item.name, cart: data.cart },
       ]);
+      setShowcaseOpen(false);
       setLoading(true);
 
       const eventNote = buildShowcaseEventMessage(item);
       const reply = await askAgent(eventNote);
       setMessages((prev) => [...prev, { id: nextId(), kind: "text", role: "assistant", content: reply }]);
+      await checkPendingOrderForPaymentPrompt();
     } finally {
       setPendingItemId(null);
       setLoading(false);
@@ -132,19 +203,53 @@ export function HomeClient({ business }: { business: BusinessInfo }) {
   }
 
   return (
-    <div className="grid flex-1 w-full max-w-5xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-2">
-      <div className="order-2 md:order-1">
-        <MenuShowcase onSelectItem={handleSelectFromShowcase} disabledItemId={pendingItemId} />
-      </div>
-      <div className="order-1 md:order-2 flex flex-col rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950 md:sticky md:top-6 md:h-[calc(100vh-3rem)]">
+    <div className="relative flex flex-1 w-full max-w-2xl flex-col px-4 py-6">
+      <div className="flex-1 flex flex-col rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950 md:h-[calc(100vh-13rem)]">
         <ChatPanel
           messages={messages}
           loading={loading}
           input={input}
           onInputChange={setInput}
           onSubmit={sendMessage}
+          onChoosePayment={handleChoosePayment}
         />
       </div>
+
+      <button
+        type="button"
+        onClick={() => setShowcaseOpen(true)}
+        className="fixed bottom-6 right-6 z-30 rounded-full bg-black px-5 py-3 text-sm font-medium text-white shadow-lg transition-opacity hover:opacity-90 dark:bg-white dark:text-black"
+      >
+        Ver menú 🍽
+      </button>
+
+      <div
+        role="presentation"
+        onClick={() => setShowcaseOpen(false)}
+        className={`fixed inset-0 z-40 bg-black/40 transition-opacity ${
+          showcaseOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
+
+      <aside
+        className={`fixed right-0 top-0 z-50 h-full w-full max-w-sm overflow-y-auto bg-white p-5 shadow-xl transition-transform duration-300 dark:bg-zinc-950 ${
+          showcaseOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Menú
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowcaseOpen(false)}
+            className="text-sm text-zinc-500 hover:text-black dark:hover:text-white"
+          >
+            Cerrar ✕
+          </button>
+        </div>
+        <MenuShowcase onSelectItem={handleSelectFromShowcase} disabledItemId={pendingItemId} />
+      </aside>
     </div>
   );
 }

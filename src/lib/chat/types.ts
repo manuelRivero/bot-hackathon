@@ -9,4 +9,5 @@ export interface ChatTurn {
 /** Lo que se renderiza en el feed del chat — puede ser texto o un componente. */
 export type DisplayMessage =
   | { id: string; kind: "text"; role: "user" | "assistant"; content: string }
-  | { id: string; kind: "cart_update"; addedItemName: string; cart: CartView };
+  | { id: string; kind: "cart_update"; addedItemName: string; cart: CartView }
+  | { id: string; kind: "payment_choice" };

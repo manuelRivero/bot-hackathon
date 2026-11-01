@@ -2,7 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { CartUpdateCard } from "@/components/CartUpdateCard";
+import { MarkdownMessage } from "@/components/MarkdownMessage";
+import { PaymentChoiceButtons } from "@/components/PaymentChoiceButtons";
 import type { DisplayMessage } from "@/lib/chat/types";
+import type { PaymentMethod } from "@/lib/db/orders";
 
 export function ChatPanel({
   messages,
@@ -10,12 +13,14 @@ export function ChatPanel({
   input,
   onInputChange,
   onSubmit,
+  onChoosePayment,
 }: {
   messages: DisplayMessage[];
   loading: boolean;
   input: string;
   onInputChange: (value: string) => void;
   onSubmit: () => void;
+  onChoosePayment: (method: PaymentMethod, label: string) => void;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -26,22 +31,26 @@ export function ChatPanel({
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 flex flex-col gap-3 overflow-y-auto mb-4 min-h-[400px]">
-        {messages.map((m) =>
-          m.kind === "text" ? (
-            <div
-              key={m.id}
-              className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${
-                m.role === "user"
-                  ? "self-end bg-blue-600 text-white"
-                  : "self-start bg-zinc-200 text-black dark:bg-zinc-800 dark:text-zinc-50"
-              }`}
-            >
-              {m.content}
-            </div>
-          ) : (
-            <CartUpdateCard key={m.id} addedItemName={m.addedItemName} cart={m.cart} />
-          ),
-        )}
+        {messages.map((m) => {
+          if (m.kind === "text") {
+            return (
+              <div
+                key={m.id}
+                className={`max-w-[85%] rounded-2xl px-4 py-2 ${
+                  m.role === "user"
+                    ? "self-end whitespace-pre-wrap bg-blue-600 text-sm text-white"
+                    : "self-start bg-zinc-200 text-black dark:bg-zinc-800 dark:text-zinc-50"
+                }`}
+              >
+                {m.role === "assistant" ? <MarkdownMessage content={m.content} /> : m.content}
+              </div>
+            );
+          }
+          if (m.kind === "cart_update") {
+            return <CartUpdateCard key={m.id} addedItemName={m.addedItemName} cart={m.cart} />;
+          }
+          return <PaymentChoiceButtons key={m.id} disabled={loading} onChoose={onChoosePayment} />;
+        })}
         {loading && (
           <div className="self-start bg-zinc-200 text-black dark:bg-zinc-800 dark:text-zinc-50 rounded-2xl px-4 py-2 text-sm">
             Escribiendo…
