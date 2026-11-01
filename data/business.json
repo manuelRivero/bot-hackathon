@@ -1,0 +1,21 @@
+{
+  "name": "La Parrilla de Manu",
+  "tagline": "Comida casera argentina con toque de parrilla",
+  "description": "Somos un restaurante de comida argentina: parrilla, pizzas caseras y algunos platos vegetarianos. Ambiente familiar, ideal para comer en el salón o pedir take away.",
+  "cuisineType": "Argentina / Parrilla / Pizzería",
+  "address": "Av. Siempre Viva 742, Buenos Aires",
+  "phone": "+54 9 11 1234-5678",
+  "hours": [
+    { "day": "Lunes", "open": null, "close": null, "note": "Cerrado" },
+    { "day": "Martes", "open": "12:00", "close": "16:00" },
+    { "day": "Miércoles", "open": "12:00", "close": "16:00" },
+    { "day": "Jueves", "open": "12:00", "close": "23:00" },
+    { "day": "Viernes", "open": "12:00", "close": "00:00" },
+    { "day": "Sábado", "open": "12:00", "close": "00:00" },
+    { "day": "Domingo", "open": "12:00", "close": "16:00" }
+  ],
+  "socialMedia": {
+    "instagram": "@laparrilladamanu",
+    "whatsapp": "+54 9 11 1234-5678"
+  }
+}

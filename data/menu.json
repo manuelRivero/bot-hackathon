@@ -1,0 +1,168 @@
+{
+  "categories": [
+    {
+      "id": "entradas",
+      "name": "Entradas",
+      "items": [
+        {
+          "id": "ent-01",
+          "name": "Empanadas de carne",
+          "description": "Empanadas caseras de carne cortada a cuchillo",
+          "price": 3500,
+          "currency": "ARS",
+          "tags": ["carne"],
+          "available": true,
+          "ingredients": ["carne vacuna", "cebolla", "huevo", "masa casera"],
+          "allergens": ["gluten", "huevo"],
+          "spiceLevel": "none",
+          "servesPeople": 1,
+          "preparation": "horneadas, porción de 3 unidades"
+        },
+        {
+          "id": "ent-02",
+          "name": "Provoleta",
+          "description": "Queso provolone grillado con orégano",
+          "price": 5200,
+          "currency": "ARS",
+          "tags": ["vegetariano"],
+          "available": true,
+          "ingredients": ["queso provolone", "orégano", "aceite de oliva"],
+          "allergens": ["lácteos"],
+          "spiceLevel": "none",
+          "servesPeople": 2,
+          "preparation": "grillada a la parrilla, se sirve para compartir"
+        }
+      ]
+    },
+    {
+      "id": "principales",
+      "name": "Platos principales",
+      "items": [
+        {
+          "id": "prin-01",
+          "name": "Pizza Muzzarella",
+          "description": "Pizza con muzzarella, salsa de tomate y aceitunas",
+          "price": 8900,
+          "currency": "ARS",
+          "tags": ["vegetariano"],
+          "available": true,
+          "ingredients": ["masa de pizza", "muzzarella", "salsa de tomate", "aceitunas"],
+          "allergens": ["gluten", "lácteos"],
+          "spiceLevel": "none",
+          "servesPeople": 2,
+          "preparation": "horneada en horno de piedra"
+        },
+        {
+          "id": "prin-02",
+          "name": "Milanesa con papas fritas",
+          "description": "Milanesa de ternera con papas fritas",
+          "price": 9800,
+          "currency": "ARS",
+          "tags": ["carne"],
+          "available": true,
+          "ingredients": ["ternera", "pan rallado", "huevo", "papas"],
+          "allergens": ["gluten", "huevo"],
+          "spiceLevel": "none",
+          "servesPeople": 1,
+          "preparation": "frita, se sirve con papas fritas caseras"
+        },
+        {
+          "id": "prin-03",
+          "name": "Ensalada Caesar",
+          "description": "Lechuga, pollo grillado, croutons y aderezo caesar",
+          "price": 7600,
+          "currency": "ARS",
+          "tags": ["pollo"],
+          "available": false,
+          "ingredients": ["lechuga", "pollo", "croutons", "aderezo caesar", "parmesano"],
+          "allergens": ["gluten", "lácteos", "huevo"],
+          "spiceLevel": "none",
+          "servesPeople": 1,
+          "preparation": "pollo grillado, ensamblada al momento"
+        },
+        {
+          "id": "prin-04",
+          "name": "Hamburguesa Picante",
+          "description": "Hamburguesa de carne con jalapeños, cheddar y salsa picante de la casa",
+          "price": 10200,
+          "currency": "ARS",
+          "tags": ["carne", "picante"],
+          "available": true,
+          "ingredients": ["carne de res", "pan brioche", "queso cheddar", "jalapeños", "salsa picante casera"],
+          "allergens": ["gluten", "lácteos"],
+          "spiceLevel": "hot",
+          "servesPeople": 1,
+          "preparation": "a la parrilla, 4 min por lado, salsa picante hecha en casa"
+        }
+      ]
+    },
+    {
+      "id": "postres",
+      "name": "Postres",
+      "items": [
+        {
+          "id": "post-01",
+          "name": "Flan casero",
+          "description": "Flan con dulce de leche y crema",
+          "price": 3200,
+          "currency": "ARS",
+          "tags": ["vegetariano"],
+          "available": true,
+          "ingredients": ["huevo", "leche", "dulce de leche", "crema"],
+          "allergens": ["lácteos", "huevo"],
+          "spiceLevel": "none",
+          "servesPeople": 1,
+          "preparation": "casero, a baño maría"
+        },
+        {
+          "id": "post-02",
+          "name": "Tiramisú",
+          "description": "Tiramisú tradicional italiano",
+          "price": 3800,
+          "currency": "ARS",
+          "tags": ["vegetariano"],
+          "available": true,
+          "ingredients": ["queso mascarpone", "café", "cacao", "bizcochos", "huevo"],
+          "allergens": ["lácteos", "huevo", "gluten"],
+          "spiceLevel": "none",
+          "servesPeople": 1,
+          "preparation": "receta tradicional italiana, con café espresso"
+        }
+      ]
+    },
+    {
+      "id": "bebidas",
+      "name": "Bebidas",
+      "items": [
+        {
+          "id": "beb-01",
+          "name": "Agua mineral",
+          "description": "Agua sin gas 500ml",
+          "price": 1800,
+          "currency": "ARS",
+          "tags": [],
+          "available": true,
+          "ingredients": ["agua"],
+          "allergens": [],
+          "spiceLevel": "none",
+          "servesPeople": 1,
+          "preparation": "fría, 500ml"
+        },
+        {
+          "id": "beb-02",
+          "name": "Coca-Cola",
+          "description": "Lata 354ml",
+          "price": 2200,
+          "currency": "ARS",
+          "tags": [],
+          "available": true,
+          "ingredients": ["agua carbonatada", "azúcar"],
+          "allergens": [],
+          "spiceLevel": "none",
+          "servesPeople": 1,
+          "preparation": "fría, lata 354ml"
+        }
+      ]
+    }
+  ]
+}
