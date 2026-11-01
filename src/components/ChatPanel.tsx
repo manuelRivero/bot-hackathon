@@ -1,11 +1,21 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CartUpdateCard } from "@/components/CartUpdateCard";
 import { MarkdownMessage } from "@/components/MarkdownMessage";
 import { PaymentChoiceButtons } from "@/components/PaymentChoiceButtons";
 import type { DisplayMessage } from "@/lib/chat/types";
 import type { PaymentMethod } from "@/lib/db/orders";
+
+const PLACEHOLDER_SUGGESTIONS = [
+  "¿Qué tienen de postre?",
+  "¿A qué hora abren hoy?",
+  "¿Tienen algo vegetariano?",
+  "¿Qué ingredientes tiene la pizza?",
+  "¿Cuál es el plato más picante?",
+];
+
+const PLACEHOLDER_INTERVAL_MS = 5000;
 
 export function ChatPanel({
   messages,
@@ -14,6 +24,7 @@ export function ChatPanel({
   onInputChange,
   onSubmit,
   onChoosePayment,
+  onRestart,
 }: {
   messages: DisplayMessage[];
   loading: boolean;
@@ -21,15 +32,34 @@ export function ChatPanel({
   onInputChange: (value: string) => void;
   onSubmit: () => void;
   onChoosePayment: (method: PaymentMethod, label: string) => void;
+  onRestart: () => void;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((i) => (i + 1) % PLACEHOLDER_SUGGESTIONS.length);
+    }, PLACEHOLDER_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="flex h-full flex-col">
+      <div className="mb-2 flex justify-end">
+        <button
+          type="button"
+          onClick={onRestart}
+          className="text-xs font-medium text-zinc-500 hover:text-black dark:text-zinc-400 dark:hover:text-white"
+        >
+          ↺ Empezar de nuevo
+        </button>
+      </div>
+
       <div className="flex-1 flex flex-col gap-3 overflow-y-auto mb-4 min-h-[400px]">
         {messages.map((m) => {
           if (m.kind === "text") {
@@ -69,8 +99,8 @@ export function ChatPanel({
         <input
           value={input}
           onChange={(e) => onInputChange(e.target.value)}
-          placeholder="¿Qué tienen de postre?"
-          className="flex-1 rounded-full border border-zinc-300 px-4 py-2 text-sm outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          placeholder={PLACEHOLDER_SUGGESTIONS[placeholderIndex]}
+          className="flex-1 rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm text-black outline-none dark:border-zinc-700"
         />
         <button
           type="submit"

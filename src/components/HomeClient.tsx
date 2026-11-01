@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { MenuShowcase } from "@/components/MenuShowcase";
 import type { BusinessInfo } from "@/lib/db/business";
@@ -49,22 +49,55 @@ function readOrCreateConversationId(): string {
   return generated;
 }
 
+function buildGreeting(business: BusinessInfo): DisplayMessage {
+  return {
+    id: nextId(),
+    kind: "text",
+    role: "assistant",
+    content: `¡Hola! Soy el asistente de ${business.name}. ${business.tagline}. Elegí algo de la vitrina o contame qué se te antoja.`,
+  };
+}
+
 export function HomeClient({ business }: { business: BusinessInfo }) {
   const [conversationId] = useState(readOrCreateConversationId);
-  const [messages, setMessages] = useState<DisplayMessage[]>([
-    {
-      id: nextId(),
-      kind: "text",
-      role: "assistant",
-      content: `¡Hola! Soy el asistente de ${business.name}. ${business.tagline}. Elegí algo de la vitrina o contame qué se te antoja.`,
-    },
-  ]);
+  const [messages, setMessages] = useState<DisplayMessage[]>([buildGreeting(business)]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [showcaseOpen, setShowcaseOpen] = useState(false);
   const historyRef = useRef<ChatTurn[]>([]);
   const paymentPromptOrderIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const eventSource = new EventSource(`/api/chat/stream?conversationId=${conversationId}`);
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === "order_dispatched") {
+          // Solo se reinicia la memoria que recibe el LLM — el chat visual
+          // conserva el historial, como pidió el usuario.
+          historyRef.current = [];
+          paymentPromptOrderIdRef.current = null;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: nextId(),
+              kind: "text",
+              role: "assistant",
+              content:
+                "🚚 ¡Tu pedido fue despachado! Ya está en camino. Si querés hacer un nuevo pedido, contame qué se te antoja.",
+            },
+          ]);
+        }
+      } catch {
+        // evento malformado, lo ignoramos
+      }
+    };
+
+    return () => eventSource.close();
+  }, [conversationId]);
 
   async function askAgent(message: string): Promise<string> {
     const history = historyRef.current;
@@ -166,6 +199,28 @@ export function HomeClient({ business }: { business: BusinessInfo }) {
     }
   }
 
+  /** Botón "Empezar de nuevo": borra el carrito en curso y reinicia el chat visual y la memoria del LLM. */
+  async function handleRestart() {
+    if (loading) return;
+    try {
+      await fetch("/api/cart/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId }),
+      });
+    } catch {
+      // Si falla el clear remoto, igual reiniciamos la vista — el próximo
+      // add_item_to_cart va a seguir leyendo el carrito viejo, pero no es
+      // crítico para una demo.
+    }
+
+    historyRef.current = [];
+    paymentPromptOrderIdRef.current = null;
+    setPendingItemId(null);
+    setShowcaseOpen(false);
+    setMessages([buildGreeting(business)]);
+  }
+
   async function handleSelectFromShowcase(item: MenuItem) {
     if (loading || pendingItemId || !conversationId) return;
     setPendingItemId(item.id);
@@ -212,6 +267,7 @@ export function HomeClient({ business }: { business: BusinessInfo }) {
           onInputChange={setInput}
           onSubmit={sendMessage}
           onChoosePayment={handleChoosePayment}
+          onRestart={handleRestart}
         />
       </div>
 
